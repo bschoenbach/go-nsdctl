@@ -1,3 +1,3 @@
-module github.com/optix2000/go-nsdctl
+module github.com/bschoenbach/go-nsdctl
 
 go 1.18

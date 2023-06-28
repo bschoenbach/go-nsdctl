@@ -189,14 +189,14 @@ func NewClientFromConfig(configPath string) (*NSDClient, error) {
 	}
 
 	if port != 0 {
-		hostString = "127.0.0.1:" + string(port)
+		hostString = "127.0.0.1:" + fmt.Sprint(port)
 	}
 
-	return NewClient(detectedType, hostString, caFile, keyFile, certFile, false)
+	return NewClient(detectedType, hostString, caFile, keyFile, certFile, false, 10, 10)
 }
 
 // NewClient creates a complete new NSDClient and returns any errors encountered
-func NewClient(serverType string, hostString string, caFile string, keyFile string, certFile string, skipVerify bool) (*NSDClient, error) {
+func NewClient(serverType string, hostString string, caFile string, keyFile string, certFile string, skipVerify bool, timeout int, keepAlive int) (*NSDClient, error) {
 	protocol, ok := supportedProtocols[serverType]
 	if !ok {
 		return nil, errors.New("Server Type not Supported")
@@ -220,11 +220,11 @@ func NewClient(serverType string, hostString string, caFile string, keyFile stri
 	// Set up connection
 	dialer := &net.Dialer{
 		// TODO: Don't hardcode these
-		Timeout: 1 * time.Second,
+		Timeout: time.Duration(timeout) * time.Second,
 		// NSD 4.1.x doesn't allow more than one connection to the socket
 		// and also closes connection after every command
 		// so keepalive is useless
-		KeepAlive: 0,
+		KeepAlive: time.Duration(keepAlive) * time.Second,
 		DualStack: true,
 	}
 

@@ -116,7 +116,7 @@ type NSDClient struct {
 }
 
 // NewClientFromConfig tries to autodetect and create a new NSDClient from an config file
-func NewClientFromConfig(configPath string) (*NSDClient, error) {
+func NewClientFromConfig(configPath string, timeout int, keepAlive int) (*NSDClient, error) {
 	filename := path.Base(configPath)
 
 	var detectedType string
@@ -192,7 +192,7 @@ func NewClientFromConfig(configPath string) (*NSDClient, error) {
 		hostString = "127.0.0.1:" + fmt.Sprint(port)
 	}
 
-	return NewClient(detectedType, hostString, caFile, keyFile, certFile, false, 10, 10)
+	return NewClient(detectedType, hostString, caFile, keyFile, certFile, false, timeout, keepAlive)
 }
 
 // NewClient creates a complete new NSDClient and returns any errors encountered

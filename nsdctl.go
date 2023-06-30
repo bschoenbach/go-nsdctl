@@ -262,11 +262,8 @@ func NewClient(serverType string, hostString string, caFile string, keyFile stri
 	}
 
 	r, err := client.Command("status")
+	fmt.Println(r)
 	if err != nil {
-		if r != nil {
-			// Drain rest of reader
-			io.Copy(ioutil.Discard, r)
-		}
 		return nil, err
 	}
 
@@ -295,23 +292,45 @@ func (n *NSDClient) attemptConnection() error {
 // Command sends a command to the control socket
 // Returns an io.Reader with the results of the command.
 // error will contain any errors encountered (including invalid commands)
-func (n *NSDClient) Command(command string) (io.Reader, error) {
+func (n *NSDClient) Command(command string) (string, error) {
 	//TODO: Currently assumes connection close.
 	// Should check if connection is available to use
-	err := n.attemptConnection()
+	fmt.Println("Creating new connection")
+	conn, err := tls.DialWithDialer(n.Dialer, "tcp", n.HostString, n.TLSClientConfig)
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// Format and send the command
-	_, err = fmt.Fprintf(n.Connection, "%s%d %s\n", n.protocol.Prefix, n.protocol.Version, command)
+	_, err = fmt.Fprintf(conn, "%s%d %s\n", n.protocol.Prefix, n.protocol.Version, command)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	r := bufio.NewReader(n.Connection)
+	r := bufio.NewReader(conn)
 	err = n.peekError(r)
-	return r, err
+
+	if err != nil {
+		return "", err
+	}
+
+	var response string
+	if conn == nil {
+		err = &NSDError{"connection reset by peer"}
+		return "", err
+	}
+	response, err = r.ReadString(io.SeekEnd)
+
+	if err != io.EOF {
+		return "", err
+	}
+
+	return response, nil
 }
 
 func (n *NSDClient) peekError(r *bufio.Reader) error {

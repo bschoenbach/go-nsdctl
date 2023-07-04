@@ -109,8 +109,6 @@ type NSDClient struct {
 	Dialer *net.Dialer
 	// TLSClientConfig is the tls.Config for the connection
 	TLSClientConfig *tls.Config
-	// Connection is the raw net.Conn for the client
-	Connection net.Conn
 	// protocol is the NSD protocol type (see supportedProtocols)
 	protocol *protocol
 }
@@ -189,7 +187,7 @@ func NewClientFromConfig(configPath string, timeout int, keepAlive int) (*NSDCli
 	}
 
 	if port != 0 {
-		hostString = "127.0.0.1:" + fmt.Sprint(port)
+		hostString = fmt.Sprintf("127.0.0.1:%d", port)
 	}
 
 	return NewClient(detectedType, hostString, caFile, keyFile, certFile, false, timeout, keepAlive)
@@ -270,32 +268,12 @@ func NewClient(serverType string, hostString string, caFile string, keyFile stri
 	return client, nil
 }
 
-// attempt to build a connection
-// NB!: Assumes connection close
-func (n *NSDClient) attemptConnection() error {
-	// Cleanly close existing connections
-	// NB!: NSD only allows one connection at a time.
-	// Old connection MUST be closed before new one is made.
-	if n.Connection != nil {
-		n.Connection.Close()
-	}
-
-	conn, err := tls.DialWithDialer(n.Dialer, "tcp", n.HostString, n.TLSClientConfig)
-	if err != nil {
-		return err
-	}
-
-	n.Connection = conn
-	return nil
-}
-
 // Command sends a command to the control socket
 // Returns an io.Reader with the results of the command.
 // error will contain any errors encountered (including invalid commands)
 func (n *NSDClient) Command(command string) (string, error) {
 	//TODO: Currently assumes connection close.
 	// Should check if connection is available to use
-	fmt.Println("Creating new connection")
 	conn, err := tls.DialWithDialer(n.Dialer, "tcp", n.HostString, n.TLSClientConfig)
 	defer func() {
 		if conn != nil {
